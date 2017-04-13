@@ -28,14 +28,16 @@ LIBS:opto
 LIBS:atmel
 LIBS:contrib
 LIBS:valves
+LIBS:saturn-cdb-adapter
+LIBS:saturn-cdb-adapter-cache
 EELAYER 25 0
 EELAYER END
-$Descr A4 11693 8268
+$Descr USLetter 11000 8500
 encoding utf-8
-Sheet 1 1
-Title ""
-Date ""
-Rev ""
+Sheet 3 4
+Title "Saturn CDB adapter"
+Date "2017-04-13"
+Rev "A"
 Comp ""
 Comment1 ""
 Comment2 ""
