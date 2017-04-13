@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name saturn-cdb-parts)(type KiCad)(uri "$(KIPRJMOD)/saturn-cdb-parts.pretty")(options "")(descr ""))
+)
