@@ -45,19 +45,19 @@ Comment3 ""
 Comment4 ""
 $EndDescr
 $Sheet
-S 1250 5450 1200 2000
+S 3600 1300 1100 600 
 U 58EFDEBD
 F0 "Flash and CPU" 60
 F1 "flash-and-cpu.sch" 60
 $EndSheet
 $Sheet
-S 1350 1300 2050 2650
+S 1350 1300 1050 600 
 U 58EFEB34
 F0 "FPGA Interface" 60
 F1 "fpga-if.sch" 60
 $EndSheet
 $Sheet
-S 7150 2300 500  1100
+S 2550 1300 900  600 
 U 58EFF3C9
 F0 "Capacitors" 60
 F1 "caps.sch" 60
