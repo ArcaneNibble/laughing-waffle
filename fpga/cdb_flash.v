@@ -27,7 +27,7 @@ input cpu_nrd;
 input cpu_dpl;
 input cpu_dph;
 
-output [7:0] led = 8'hAA;
+output [7:0] led;
 
 output ftdi_tx;
 input ftdi_rx;
@@ -50,6 +50,10 @@ wire uart_in_busy;
 reg [7:0] uart_out_data = 8'h00;
 reg uart_out_ready = 0;
 wire uart_out_busy;
+
+reg [3:0] fsm_state;
+reg [3:0] next_fsm_state;
+reg [7:0] loopback_tmp;
 
 // IO buffers that can't be auto-inferred
 genvar i;
@@ -96,5 +100,51 @@ UART uart(
     .rxrdy(uart_in_ready),
     .rxactive(uart_in_busy)
 );
+
+// Test loopback FSM
+assign led[7:0] = loopback_tmp[7:0];
+// Sequential logic
+always @(posedge clk_48mhz) begin
+    if (internal_rst == 1) begin
+        fsm_state <= 4'b0000;
+    end else begin
+        fsm_state <= next_fsm_state;
+
+        if (fsm_state == 4'b0000 && uart_in_ready == 1) begin
+            loopback_tmp <= uart_in_data;
+        end
+    end
+end
+// State transition logic
+always @(*) begin
+    case (fsm_state)
+        4'b0000: begin
+            if (uart_in_ready == 1) begin
+                next_fsm_state <= 4'b0001;
+            end else begin
+                next_fsm_state <= 4'b0000;
+            end
+        end
+        4'b0001: begin
+            next_fsm_state <= 4'b0000;
+        end
+        default: begin
+            next_fsm_state <= 4'b0000;
+        end
+    endcase
+end
+// Output logic
+always @(*) begin
+    case (fsm_state)
+        4'b0001: begin
+            uart_out_data <= loopback_tmp;
+            uart_out_ready <= 1;
+        end
+        default: begin
+            uart_out_data <= 8'h00;
+            uart_out_ready <= 0;
+        end
+    endcase
+end
 
 endmodule
