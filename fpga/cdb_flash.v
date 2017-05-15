@@ -29,7 +29,7 @@ input cpu_dph;
 
 output [7:0] led = 8'hAA;
 
-output ftdi_tx = 1;
+output ftdi_tx;
 input ftdi_rx;
 input ftdi_rts;
 input ftdi_dtr;
@@ -42,6 +42,14 @@ reg databus_oe = 0;
 wire clk_48mhz;
 wire internal_rst;
 wire pll_lock;
+
+// Uart signals
+wire [7:0] uart_in_data;
+wire uart_in_ready;
+wire uart_in_busy;
+reg [7:0] uart_out_data = 8'h00;
+reg uart_out_ready = 0;
+wire uart_out_busy;
 
 // IO buffers that can't be auto-inferred
 genvar i;
@@ -67,11 +75,26 @@ SB_PLL40_CORE #(
     .FILTER_RANGE(3'b001)   // FILTER_RANGE = 1
 ) pll (
     .LOCK(pll_lock),
-    .RESETB(1),
-    .BYPASS(0),
+    .RESETB(1'b1),
+    .BYPASS(1'b0),
     .REFERENCECLK(clk_12mhz),
     .PLLOUTGLOBAL(clk_48mhz)
 );
 assign internal_rst = !pll_lock;
+
+UART uart(
+    .clk(clk_48mhz),
+    .clkdiv(16'd48),
+
+    .tx(ftdi_tx),
+    .txin(uart_out_data),
+    .txrdy(uart_out_ready),
+    .txactive(uart_out_busy),
+
+    .rx(ftdi_rx),
+    .rxout(uart_in_data),
+    .rxrdy(uart_in_ready),
+    .rxactive(uart_in_busy)
+);
 
 endmodule
