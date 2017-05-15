@@ -39,6 +39,10 @@ reg [15:0] databus_o = 16'h0000;
 wire [15:0] databus_i;
 reg databus_oe = 0;
 
+wire clk_48mhz;
+wire internal_rst;
+wire pll_lock;
+
 // IO buffers that can't be auto-inferred
 genvar i;
 for (i = 0; i < 16; i=i+1) begin
@@ -52,5 +56,22 @@ for (i = 0; i < 16; i=i+1) begin
         .D_IN_0(databus_i[i])
     );
 end
+
+// PLL for 48 MHz
+SB_PLL40_CORE #(
+    .PLLOUT_SELECT("GENCLK"),
+    .FEEDBACK_PATH("SIMPLE"),
+    .DIVR(4'b0000),     // DIVR =  0
+    .DIVF(7'b0111111),  // DIVF = 63
+    .DIVQ(3'b100),      // DIVQ =  4
+    .FILTER_RANGE(3'b001)   // FILTER_RANGE = 1
+) pll (
+    .LOCK(pll_lock),
+    .RESETB(1),
+    .BYPASS(0),
+    .REFERENCECLK(clk_12mhz),
+    .PLLOUTGLOBAL(clk_48mhz)
+);
+assign internal_rst = !pll_lock;
 
 endmodule
