@@ -1,10 +1,17 @@
 typedef volatile unsigned char vu8;
 typedef volatile unsigned short vu16;
 
+void delay() {
+    for (volatile int i = 0; i < 32; i++) { }
+}
+
 void start_c() {
     *((vu16*)0x0A000000) = 0x55;
 
-    while (1) {}
+    while (1) {
+        *((vu16*)0x0A000002) = 0xAB;
+        delay();
+    }
 
     // // IO port
     // *((vu16*)0x050001CC) = 0xA;

@@ -16,7 +16,7 @@ popd
 # dd if=/dev/zero of=dump.bin bs=1 count=0 seek=16384
 ./bram.py dump/dump.bin dump_bin.vh
 
-yosys -q -p "synth_ice40 -blif cdb_dump.blif" cdb_dump.v
+yosys -q -p "synth_ice40 -blif cdb_dump.blif" cdb_dump.v UART.v
 arachne-pnr -d 8k -P ct256 -p hx8k-breakout-pins.pcf cdb_dump.blif -o cdb_dump.txt
 icetime -d hx8k cdb_dump.txt
 icepack cdb_dump.txt cdb_dump.bin

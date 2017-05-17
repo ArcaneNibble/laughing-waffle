@@ -31,7 +31,7 @@ input cpu_dph;
 
 output [7:0] led;
 
-output ftdi_tx = 1;
+output ftdi_tx;
 input ftdi_rx;
 input ftdi_rts;
 input ftdi_dtr;
@@ -115,6 +115,8 @@ reg cpu_nrd_clk_clk;
 reg cpu_nwrl_nwr_clk_clk;
 reg cpu_nwrh_nlbs_clk_clk;
 reg [15:0] databus_i_clk_clk;
+reg cpu_nwrl_nwr_clk_clk_clk;
+reg cpu_nwrh_nlbs_clk_clk_clk;
 
 always @(posedge clk_48mhz) begin
     addr_clk <= a;
@@ -129,6 +131,8 @@ always @(posedge clk_48mhz) begin
     cpu_nwrl_nwr_clk_clk <= cpu_nwrl_nwr_clk;
     cpu_nwrh_nlbs_clk_clk <= cpu_nwrh_nlbs_clk;
     databus_i_clk_clk <= databus_i_clk;
+    cpu_nwrl_nwr_clk_clk_clk <= cpu_nwrl_nwr_clk_clk;
+    cpu_nwrh_nlbs_clk_clk_clk <= cpu_nwrh_nlbs_clk_clk;
 end
 
 always @(*) begin
@@ -143,15 +147,147 @@ end
 
 // Write data stuff
 reg [7:0] test_reg;
+reg [7:0] uart_reg;
+reg uart_reg_ready;
+reg uart_tx_done;
 always @(posedge clk_48mhz) begin
-    if (cpu_ncs_clk_clk[2] == 0 && cpu_nwrl_nwr == 0) begin
+    if (uart_tx_done == 1) begin
+        uart_reg_ready <= 0;
+    end
+    if (cpu_ncs_clk_clk[2] == 0 && cpu_nwrl_nwr_clk_clk == 1 && cpu_nwrl_nwr_clk_clk_clk == 0) begin
         case (addr_clk_clk)
             26'h0000000: begin
                 test_reg <= databus_i_clk_clk[7:0];
+            end
+            26'h0000002: begin
+                uart_reg <= databus_i_clk_clk[7:0];
+                uart_reg_ready <= 1;
             end
         endcase
     end
 end
 assign led[6:0] = test_reg[6:0];
+
+function [7:0] binary_to_ascii;
+    input [3:0] binary;
+
+    case (binary)
+        4'h0: binary_to_ascii = 8'h30;
+        4'h1: binary_to_ascii = 8'h31;
+        4'h2: binary_to_ascii = 8'h32;
+        4'h3: binary_to_ascii = 8'h33;
+        4'h4: binary_to_ascii = 8'h34;
+        4'h5: binary_to_ascii = 8'h35;
+        4'h6: binary_to_ascii = 8'h36;
+        4'h7: binary_to_ascii = 8'h37;
+        4'h8: binary_to_ascii = 8'h38;
+        4'h9: binary_to_ascii = 8'h39;
+        4'ha: binary_to_ascii = 8'h41;
+        4'hb: binary_to_ascii = 8'h42;
+        4'hc: binary_to_ascii = 8'h43;
+        4'hd: binary_to_ascii = 8'h44;
+        4'he: binary_to_ascii = 8'h45;
+        4'hf: binary_to_ascii = 8'h46;
+    endcase
+endfunction
+
+// Uart signals
+wire [7:0] uart_in_data;
+wire uart_in_ready;
+wire uart_in_busy;
+reg [7:0] uart_out_data;
+reg uart_out_ready;
+wire uart_out_busy;
+
+// Simple UART module
+UART uart(
+    .clk(clk_48mhz),
+    .clkdiv(16'd48),
+
+    .tx(ftdi_tx),
+    .txin(uart_out_data),
+    .txrdy(uart_out_ready),
+    .txactive(uart_out_busy),
+
+    .rx(ftdi_rx),
+    .rxout(uart_in_data),
+    .rxrdy(uart_in_ready),
+    .rxactive(uart_in_busy)
+);
+
+parameter UART_IDLE     = 3'b000;
+parameter UART_TX0      = 3'b001;
+parameter UART_TX1      = 3'b010;
+reg [2:0] uart_fsm;
+reg [2:0] uart_fsm_next;
+
+always @(posedge clk_48mhz) begin
+    if (internal_rst == 1) begin
+        uart_fsm <= UART_IDLE;
+    end else begin
+        uart_fsm <= uart_fsm_next;
+
+        if (uart_fsm == UART_TX0 && uart_fsm_next == UART_TX1)
+            uart_tx_done <= 1;
+        else
+            uart_tx_done <= 0;
+    end
+end
+
+always @(*) begin
+    case (uart_fsm)
+        UART_IDLE: begin
+            if (uart_reg_ready == 1) begin
+                uart_fsm_next <= UART_TX0;
+            end else begin
+                uart_fsm_next <= UART_IDLE;
+            end
+        end
+        UART_TX0: begin
+            if (uart_out_busy == 0) begin
+                uart_fsm_next <= UART_TX1;
+            end else begin
+                uart_fsm_next <= UART_TX0;
+            end
+        end
+        UART_TX1: begin
+            if (uart_out_busy == 0) begin
+                uart_fsm_next <= UART_IDLE;
+            end else begin
+                uart_fsm_next <= UART_TX1;
+            end
+        end
+        default: begin
+            uart_fsm_next <= UART_IDLE;
+        end
+    endcase
+end
+
+always @(*) begin
+    case (uart_fsm)
+        UART_TX0: begin
+            if (uart_out_busy == 0) begin
+                uart_out_data <= binary_to_ascii(uart_reg[7:4]);
+                uart_out_ready <= 1;
+            end else begin
+                uart_out_data <= 8'h00;
+                uart_out_ready <= 0;
+            end
+        end
+        UART_TX1: begin
+            if (uart_out_busy == 0) begin
+                uart_out_data <= binary_to_ascii(uart_reg[3:0]);
+                uart_out_ready <= 1;
+            end else begin
+                uart_out_data <= 8'h00;
+                uart_out_ready <= 0;
+            end
+        end
+        default: begin
+            uart_out_data <= 8'h00;
+            uart_out_ready <= 0;
+        end
+    endcase
+end
 
 endmodule
