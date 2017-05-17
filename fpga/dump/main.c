@@ -8,10 +8,14 @@ void delay() {
 void start_c() {
     *((vu16*)0x0A000000) = 0x55;
 
-    while (1) {
-        *((vu16*)0x0A000002) = 0xAB;
+    *((vu16*)0x0A000004) = 2;
+
+    for (int i = 0; i < 0x1000000; i++) {
+        *((vu16*)0x0A000002) = *((vu8*)i);
         delay();
     }
+
+    while (1) {}
 
     // // IO port
     // *((vu16*)0x050001CC) = 0xA;

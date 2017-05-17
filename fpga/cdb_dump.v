@@ -13,9 +13,9 @@ output flash_nce = 1;
 output flash_noe = 1;
 output flash_nwe = 1;
 
-output md0 = 1;
-output md1 = 0;
-output md2 = 0;
+output md0;
+output md1;
+output md2;
 
 output cpu_nres;
 output cpu_nmi = 1;
@@ -148,6 +148,8 @@ end
 // Write data stuff
 reg [7:0] test_reg;
 reg [7:0] uart_reg;
+reg [2:0] mode_reg;
+initial mode_reg = 3'b001;
 reg uart_reg_ready;
 reg uart_tx_done;
 always @(posedge clk_48mhz) begin
@@ -163,10 +165,16 @@ always @(posedge clk_48mhz) begin
                 uart_reg <= databus_i_clk_clk[7:0];
                 uart_reg_ready <= 1;
             end
+            26'h0000004: begin
+                mode_reg <= databus_i_clk_clk[2:0];
+            end
         endcase
     end
 end
 assign led[6:0] = test_reg[6:0];
+assign md2 = mode_reg[2];
+assign md1 = mode_reg[1];
+assign md0 = mode_reg[0];
 
 function [7:0] binary_to_ascii;
     input [3:0] binary;
